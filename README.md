@@ -26,14 +26,9 @@ npm run build
 manifest.json
 background/background.js
 content/content.js
-popup/popup.html
-popup/popup.css
-popup/popup.js
 ```
 
 ### Notes
-- Popup toggle sends a message to the content script to toggle a highlight outline.
-- Reduce `<all_urls>` and requested permissions for production.
 
 
 
