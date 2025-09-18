@@ -7,9 +7,7 @@
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
-      img, picture, video[poster] { display: none !important; }
-      [style*="background"], [style*="background-image"] { background-image: none !important; }
-      * { --bili-bg-image: none !important; }
+      .feed2 { display: none !important; }
     `;
     document.documentElement.appendChild(style);
   }
