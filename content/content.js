@@ -1,39 +1,74 @@
 (() => {
-  const STYLE_ID = "biliblocker-content-style";
+  // Hide <img> elements and elements with CSS background images as a fallback
+  const STYLE_ID = "biliblocker-hide-images";
 
-  function ensureStyle() {
+  function injectCssOnce() {
     if (document.getElementById(STYLE_ID)) return;
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
-      .biliblocker-highlight-outline *:hover {
-        outline: 2px dashed #ff4d4f !important;
-        outline-offset: 2px !important;
-      }
+      img, picture, video[poster] { display: none !important; }
+      [style*="background"], [style*="background-image"] { background-image: none !important; }
+      * { --bili-bg-image: none !important; }
     `;
     document.documentElement.appendChild(style);
   }
 
-  function removeStyle() {
-    const style = document.getElementById(STYLE_ID);
-    if (style && style.parentNode) style.parentNode.removeChild(style);
+  function removeSrcFromExistingImages() {
+    const images = document.querySelectorAll("img[src], source[srcset]");
+    images.forEach((el) => {
+      if (el.tagName.toLowerCase() === "img") {
+        el.removeAttribute("src");
+        el.removeAttribute("srcset");
+      } else {
+        el.removeAttribute("srcset");
+      }
+    });
   }
 
-  function setEnabled(enabled) {
-    if (enabled) {
-      ensureStyle();
-      document.documentElement.classList.add("biliblocker-highlight-outline");
-    } else {
-      document.documentElement.classList.remove("biliblocker-highlight-outline");
-      removeStyle();
-    }
+  function observeMutations() {
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === "attributes") {
+          const target = m.target;
+          if (target.tagName && target.tagName.toLowerCase() === "img") {
+            target.removeAttribute("src");
+            target.removeAttribute("srcset");
+          }
+          continue;
+        }
+        m.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return;
+          if (node.tagName.toLowerCase() === "img") {
+            node.removeAttribute("src");
+            node.removeAttribute("srcset");
+          }
+          node.querySelectorAll("img, source").forEach((el) => {
+            el.removeAttribute("src");
+            el.removeAttribute("srcset");
+          });
+        });
+      }
+    });
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["src", "srcset", "style"],
+    });
   }
 
-  // Respond to messages from popup/background
-  browser.runtime.onMessage.addListener((msg) => {
-    if (!msg || msg.type !== "TOGGLE_OUTLINE") return;
-    setEnabled(Boolean(msg.enabled));
-  });
+  function init() {
+    injectCssOnce();
+    removeSrcFromExistingImages();
+    observeMutations();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
 })();
 
 

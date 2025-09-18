@@ -1,31 +1,23 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "Biliblocker",
   "version": "0.1.0",
-  "description": "Starter Firefox MV3 extension scaffold.",
-  "action": {
-    "default_title": "Biliblocker",
-    "default_popup": "popup/popup.html"
-  },
+  "description": "Block images on bilibili.com.",
   "permissions": [
-    "scripting",
-    "activeTab",
-    "storage"
-  ],
-  "host_permissions": [
-    "<all_urls>"
+    "webRequest",
+    "webRequestBlocking",
+    "*://*.bilibili.com/*"
   ],
   "background": {
-    "service_worker": "background/background.js",
-    "type": "module"
+    "scripts": ["background/background.js"],
+    "persistent": true
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["*://*.bilibili.com/*"],
       "js": ["content/content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
-  ],
-  "web_accessible_resources": []
+  ]
 }
 
