@@ -1,0 +1,15 @@
+{
+  "name": "biliblocker-extension",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "npx --yes web-ext run --source-dir . --start-url about:debugging#/runtime/this-firefox",
+    "build": "npx --yes web-ext build --source-dir . --overwrite-dest",
+    "lint": "npx --yes web-ext lint --source-dir ."
+  },
+  "devDependencies": {
+    "web-ext": "^7.10.0"
+  }
+}
+
+
