@@ -4,10 +4,12 @@
   "version": "0.1.0",
   "description": "Block images on bilibili.com.",
   "permissions": [
-    "webRequest",
-    "webRequestBlocking",
-    "*://*.bilibili.com/*"
+    "storage"
   ],
+  "browser_action": {
+    "default_title": "Biliblocker",
+    "default_popup": "popup/popup.html"
+  },
   "background": {
     "scripts": ["background/background.js"],
     "persistent": true

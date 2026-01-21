@@ -1,14 +1,12 @@
-// Background service worker (MV3)
-browser.runtime.onInstalled.addListener(() => {
+function getApi() {
+  return globalThis.browser ?? globalThis.chrome;
+}
+
+const api = getApi();
+
+api?.runtime?.onInstalled?.addListener?.(() => {
   console.log("Biliblocker installed");
 });
-
-// Block all image requests on bilibili.com
-browser.webRequest.onBeforeRequest.addListener(
-  () => ({ cancel: true }),
-  { urls: ["*://*.bilibili.com/*"], types: ["image"] },
-  ["blocking"]
-);
 
 
 

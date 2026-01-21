@@ -1,65 +1,63 @@
 (() => {
-  // Hide <img> elements and elements with CSS background images as a fallback
-  const STYLE_ID = "biliblocker-hide-images";
+  // Toggle hiding home feed (feed2).
+  const KEY_HIDE_HOME_FEED = "hideHomeFeed";
+  const STYLE_ID_HIDE_FEED2 = "biliblocker-hide-feed2";
+  let enabled = true;
 
-  function injectCssOnce() {
-    if (document.getElementById(STYLE_ID)) return;
+  function getApi() {
+    return globalThis.browser ?? globalThis.chrome;
+  }
+
+  async function storageGet(key) {
+    const api = getApi();
+    if (!api?.storage?.local?.get) return {};
+    const res = api.storage.local.get(key);
+    if (res && typeof res.then === "function") return await res;
+    return await new Promise((resolve) => api.storage.local.get(key, resolve));
+  }
+
+  function setFeed2Hidden(hidden) {
+    const existing = document.getElementById(STYLE_ID_HIDE_FEED2);
+    if (!hidden) {
+      if (existing) existing.remove();
+      return;
+    }
+    if (existing) return;
     const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = `
-      .feed2 { display: none !important; }
-    `;
+    style.id = STYLE_ID_HIDE_FEED2;
+    style.textContent = `.feed2 { display: none !important; }`;
     document.documentElement.appendChild(style);
   }
 
-  function removeSrcFromExistingImages() {
-    const images = document.querySelectorAll("img[src], source[srcset]");
-    images.forEach((el) => {
-      if (el.tagName.toLowerCase() === "img") {
-        el.removeAttribute("src");
-        el.removeAttribute("srcset");
-      } else {
-        el.removeAttribute("srcset");
+  async function initHideHomeFeedSetting() {
+    const stored = await storageGet(KEY_HIDE_HOME_FEED);
+    const storedEnabled =
+      typeof stored?.[KEY_HIDE_HOME_FEED] === "boolean"
+        ? stored[KEY_HIDE_HOME_FEED]
+        : true;
+
+    applyEnabled(!!storedEnabled);
+  }
+
+  function initMessageListener() {
+    const api = getApi();
+    if (!api?.runtime?.onMessage?.addListener) return;
+    api.runtime.onMessage.addListener((msg) => {
+      if (!msg || typeof msg !== "object") return;
+      if (msg.type === "SET_HIDE_HOME_FEED") {
+        applyEnabled(!!msg.enabled);
       }
     });
   }
 
-  function observeMutations() {
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.type === "attributes") {
-          const target = m.target;
-          if (target.tagName && target.tagName.toLowerCase() === "img") {
-            target.removeAttribute("src");
-            target.removeAttribute("srcset");
-          }
-          continue;
-        }
-        m.addedNodes.forEach((node) => {
-          if (!(node instanceof Element)) return;
-          if (node.tagName.toLowerCase() === "img") {
-            node.removeAttribute("src");
-            node.removeAttribute("srcset");
-          }
-          node.querySelectorAll("img, source").forEach((el) => {
-            el.removeAttribute("src");
-            el.removeAttribute("srcset");
-          });
-        });
-      }
-    });
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["src", "srcset", "style"],
-    });
+  function applyEnabled(nextEnabled) {
+    enabled = !!nextEnabled;
+    setFeed2Hidden(enabled);
   }
 
   function init() {
-    injectCssOnce();
-    removeSrcFromExistingImages();
-    observeMutations();
+    initMessageListener();
+    initHideHomeFeedSetting();
   }
 
   if (document.readyState === "loading") {
