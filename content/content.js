@@ -1,14 +1,17 @@
 (() => {
-  // Toggle hiding home feed (feed2), sidebar (rcmd-tab), and end screen feed (bpx-player-ending-wrap).
+  // Toggle hiding home feed (feed2), sidebar (rcmd-tab), end screen feed (bpx-player-ending-wrap), and disable autoplay.
   const KEY_HIDE_HOME_FEED = "hideHomeFeed";
   const KEY_HIDE_SIDEBAR = "hideSidebar";
   const KEY_HIDE_END_SCREEN_FEED = "hideEndScreenFeed";
+  const KEY_DISABLE_AUTOPLAY = "disableAutoplay";
   const STYLE_ID_HIDE_FEED2 = "biliblocker-hide-feed2";
   const STYLE_ID_HIDE_SIDEBAR = "biliblocker-hide-sidebar";
   const STYLE_ID_HIDE_END_SCREEN_FEED = "biliblocker-hide-end-screen-feed";
   let enabledHomeFeed = true;
   let enabledSidebar = true;
   let enabledEndScreenFeed = true;
+  let enabledDisableAutoplay = true;
+  let autoplayObserver = null;
 
   function getApi() {
     return globalThis.browser ?? globalThis.chrome;
@@ -61,10 +64,46 @@
     document.documentElement.appendChild(style);
   }
 
+  function toggleAutoplaySwitch(enabled) {
+    // When enabled: find .switch-btn.on and remove "on" class
+    // When disabled: find .switch-btn and add "on" class
+    if (enabled) {
+      const switches = document.querySelectorAll(".switch-btn.on");
+      switches.forEach((el) => {
+        el.classList.remove("on");
+      });
+    } else {
+      const switches = document.querySelectorAll(".switch-btn:not(.on)");
+      switches.forEach((el) => {
+        el.classList.add("on");
+      });
+    }
+  }
+
+  function startObservingAutoplay() {
+    if (autoplayObserver) return;
+    autoplayObserver = new MutationObserver(() => {
+      if (enabledDisableAutoplay) {
+        toggleAutoplaySwitch(true);
+      }
+    });
+    autoplayObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  function stopObservingAutoplay() {
+    if (!autoplayObserver) return;
+    autoplayObserver.disconnect();
+    autoplayObserver = null;
+  }
+
   async function initSettings() {
     const storedHomeFeed = await storageGet(KEY_HIDE_HOME_FEED);
     const storedSidebar = await storageGet(KEY_HIDE_SIDEBAR);
     const storedEndScreenFeed = await storageGet(KEY_HIDE_END_SCREEN_FEED);
+    const storedDisableAutoplay = await storageGet(KEY_DISABLE_AUTOPLAY);
     
     const enabledHomeFeedValue =
       typeof storedHomeFeed?.[KEY_HIDE_HOME_FEED] === "boolean"
@@ -81,9 +120,15 @@
         ? storedEndScreenFeed[KEY_HIDE_END_SCREEN_FEED]
         : true;
 
+    const enabledDisableAutoplayValue =
+      typeof storedDisableAutoplay?.[KEY_DISABLE_AUTOPLAY] === "boolean"
+        ? storedDisableAutoplay[KEY_DISABLE_AUTOPLAY]
+        : true;
+
     applyHomeFeedEnabled(!!enabledHomeFeedValue);
     applySidebarEnabled(!!enabledSidebarValue);
     applyEndScreenFeedEnabled(!!enabledEndScreenFeedValue);
+    applyDisableAutoplayEnabled(!!enabledDisableAutoplayValue);
   }
 
   function initMessageListener() {
@@ -97,6 +142,8 @@
         applySidebarEnabled(!!msg.enabled);
       } else if (msg.type === "SET_HIDE_END_SCREEN_FEED") {
         applyEndScreenFeedEnabled(!!msg.enabled);
+      } else if (msg.type === "SET_DISABLE_AUTOPLAY") {
+        applyDisableAutoplayEnabled(!!msg.enabled);
       }
     });
   }
@@ -114,6 +161,17 @@
   function applyEndScreenFeedEnabled(nextEnabled) {
     enabledEndScreenFeed = !!nextEnabled;
     setEndScreenFeedHidden(enabledEndScreenFeed);
+  }
+
+  function applyDisableAutoplayEnabled(nextEnabled) {
+    enabledDisableAutoplay = !!nextEnabled;
+    if (enabledDisableAutoplay) {
+      toggleAutoplaySwitch(true);
+      startObservingAutoplay();
+    } else {
+      toggleAutoplaySwitch(false);
+      stopObservingAutoplay();
+    }
   }
 
   function init() {
