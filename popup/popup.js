@@ -1,4 +1,6 @@
 const KEY_HIDE_HOME_FEED = "hideHomeFeed";
+const KEY_HIDE_SIDEBAR = "hideSidebar";
+const KEY_HIDE_END_SCREEN_FEED = "hideEndScreenFeed";
 
 function getApi() {
   return globalThis.browser ?? globalThis.chrome;
@@ -28,12 +30,12 @@ async function getActiveTab() {
   return tabs?.[0] ?? null;
 }
 
-async function sendSettingToTab(hideHomeFeed) {
+async function sendSettingToTab(type, enabled) {
   const api = getApi();
   const tab = await getActiveTab();
   if (!tab?.id || !api?.tabs?.sendMessage) return;
   try {
-    const res = api.tabs.sendMessage(tab.id, { type: "SET_HIDE_HOME_FEED", enabled: hideHomeFeed });
+    const res = api.tabs.sendMessage(tab.id, { type, enabled });
     if (res && typeof res.then === "function") await res;
   } catch (_) {
     // Ignore: tab may not have our content script (non-bilibili pages).
@@ -52,24 +54,54 @@ async function sendSettingToBackground(hideHomeFeed) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const checkbox = document.getElementById("hide-home-feed");
-  if (!(checkbox instanceof HTMLInputElement)) return;
+  const checkboxHomeFeed = document.getElementById("hide-home-feed");
+  const checkboxSidebar = document.getElementById("hide-sidebar");
+  const checkboxEndScreenFeed = document.getElementById("hide-end-screen-feed");
+  
+  if (!(checkboxHomeFeed instanceof HTMLInputElement) || !(checkboxSidebar instanceof HTMLInputElement) || !(checkboxEndScreenFeed instanceof HTMLInputElement)) return;
 
-  const stored = await storageGet(KEY_HIDE_HOME_FEED);
-  const initial = typeof stored?.[KEY_HIDE_HOME_FEED] === "boolean" ? stored[KEY_HIDE_HOME_FEED] : true;
-
-  checkbox.checked = initial;
-  // Persist default so content script can rely on it.
-  if (typeof stored?.[KEY_HIDE_HOME_FEED] !== "boolean") {
+  // Load and initialize home feed setting
+  const storedHomeFeed = await storageGet(KEY_HIDE_HOME_FEED);
+  const initialHomeFeed = typeof storedHomeFeed?.[KEY_HIDE_HOME_FEED] === "boolean" ? storedHomeFeed[KEY_HIDE_HOME_FEED] : true;
+  checkboxHomeFeed.checked = initialHomeFeed;
+  if (typeof storedHomeFeed?.[KEY_HIDE_HOME_FEED] !== "boolean") {
     await storageSet({ [KEY_HIDE_HOME_FEED]: true });
   }
 
-  // Apply immediately on current tab (no refresh needed).
-  await sendSettingToTab(checkbox.checked);
+  // Load and initialize sidebar setting
+  const storedSidebar = await storageGet(KEY_HIDE_SIDEBAR);
+  const initialSidebar = typeof storedSidebar?.[KEY_HIDE_SIDEBAR] === "boolean" ? storedSidebar[KEY_HIDE_SIDEBAR] : true;
+  checkboxSidebar.checked = initialSidebar;
+  if (typeof storedSidebar?.[KEY_HIDE_SIDEBAR] !== "boolean") {
+    await storageSet({ [KEY_HIDE_SIDEBAR]: true });
+  }
 
-  checkbox.addEventListener("change", async () => {
-    await storageSet({ [KEY_HIDE_HOME_FEED]: checkbox.checked });
-    await sendSettingToTab(checkbox.checked);
+  // Load and initialize end screen feed setting
+  const storedEndScreenFeed = await storageGet(KEY_HIDE_END_SCREEN_FEED);
+  const initialEndScreenFeed = typeof storedEndScreenFeed?.[KEY_HIDE_END_SCREEN_FEED] === "boolean" ? storedEndScreenFeed[KEY_HIDE_END_SCREEN_FEED] : true;
+  checkboxEndScreenFeed.checked = initialEndScreenFeed;
+  if (typeof storedEndScreenFeed?.[KEY_HIDE_END_SCREEN_FEED] !== "boolean") {
+    await storageSet({ [KEY_HIDE_END_SCREEN_FEED]: true });
+  }
+
+  // Apply immediately on current tab (no refresh needed).
+  await sendSettingToTab("SET_HIDE_HOME_FEED", checkboxHomeFeed.checked);
+  await sendSettingToTab("SET_HIDE_SIDEBAR", checkboxSidebar.checked);
+  await sendSettingToTab("SET_HIDE_END_SCREEN_FEED", checkboxEndScreenFeed.checked);
+
+  checkboxHomeFeed.addEventListener("change", async () => {
+    await storageSet({ [KEY_HIDE_HOME_FEED]: checkboxHomeFeed.checked });
+    await sendSettingToTab("SET_HIDE_HOME_FEED", checkboxHomeFeed.checked);
+  });
+
+  checkboxSidebar.addEventListener("change", async () => {
+    await storageSet({ [KEY_HIDE_SIDEBAR]: checkboxSidebar.checked });
+    await sendSettingToTab("SET_HIDE_SIDEBAR", checkboxSidebar.checked);
+  });
+
+  checkboxEndScreenFeed.addEventListener("change", async () => {
+    await storageSet({ [KEY_HIDE_END_SCREEN_FEED]: checkboxEndScreenFeed.checked });
+    await sendSettingToTab("SET_HIDE_END_SCREEN_FEED", checkboxEndScreenFeed.checked);
   });
 });
 
