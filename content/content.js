@@ -47,7 +47,7 @@
     if (existing) return;
     const style = document.createElement("style");
     style.id = STYLE_ID_HIDE_SIDEBAR;
-    style.textContent = `.rcmd-tab { display: none !important; }`;
+    style.textContent = `.right-container { display: none !important; }`;
     document.documentElement.appendChild(style);
   }
 
