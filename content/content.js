@@ -4,13 +4,16 @@
   const KEY_HIDE_SIDEBAR = "hideSidebar";
   const KEY_HIDE_END_SCREEN_FEED = "hideEndScreenFeed";
   const KEY_DISABLE_AUTOPLAY = "disableAutoplay";
+  const KEY_HIDE_PLAYLIST = "hidePlaylist";
   const STYLE_ID_HIDE_FEED2 = "biliblocker-hide-feed2";
   const STYLE_ID_HIDE_SIDEBAR = "biliblocker-hide-sidebar";
   const STYLE_ID_HIDE_END_SCREEN_FEED = "biliblocker-hide-end-screen-feed";
+  const STYLE_ID_HIDE_PLAYLIST = "biliblocker-hide-playlist";
   let enabledHomeFeed = true;
   let enabledSidebar = true;
   let enabledEndScreenFeed = true;
   let enabledDisableAutoplay = true;
+  let enabledHidePlaylist = true;
   let autoplayObserver = null;
 
   function getApi() {
@@ -64,6 +67,19 @@
     document.documentElement.appendChild(style);
   }
 
+  function setPlaylistHidden(hidden) {
+    const existing = document.getElementById(STYLE_ID_HIDE_PLAYLIST);
+    if (!hidden) {
+      if (existing) existing.remove();
+      return;
+    }
+    if (existing) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID_HIDE_PLAYLIST;
+    style.textContent = `.video-pod { display: none !important; }`;
+    document.documentElement.appendChild(style);
+  }
+
   function toggleAutoplaySwitch(enabled) {
     // When enabled: find .switch-btn.on and remove "on" class
     // When disabled: find .switch-btn and add "on" class
@@ -104,12 +120,13 @@
     const storedSidebar = await storageGet(KEY_HIDE_SIDEBAR);
     const storedEndScreenFeed = await storageGet(KEY_HIDE_END_SCREEN_FEED);
     const storedDisableAutoplay = await storageGet(KEY_DISABLE_AUTOPLAY);
-    
+    const storedHidePlaylist = await storageGet(KEY_HIDE_PLAYLIST);
+
     const enabledHomeFeedValue =
       typeof storedHomeFeed?.[KEY_HIDE_HOME_FEED] === "boolean"
         ? storedHomeFeed[KEY_HIDE_HOME_FEED]
         : true;
-    
+
     const enabledSidebarValue =
       typeof storedSidebar?.[KEY_HIDE_SIDEBAR] === "boolean"
         ? storedSidebar[KEY_HIDE_SIDEBAR]
@@ -125,10 +142,16 @@
         ? storedDisableAutoplay[KEY_DISABLE_AUTOPLAY]
         : true;
 
+    const enabledHidePlaylistValue =
+      typeof storedHidePlaylist?.[KEY_HIDE_PLAYLIST] === "boolean"
+        ? storedHidePlaylist[KEY_HIDE_PLAYLIST]
+        : true;
+
     applyHomeFeedEnabled(!!enabledHomeFeedValue);
     applySidebarEnabled(!!enabledSidebarValue);
     applyEndScreenFeedEnabled(!!enabledEndScreenFeedValue);
     applyDisableAutoplayEnabled(!!enabledDisableAutoplayValue);
+    applyPlaylistEnabled(!!enabledHidePlaylistValue);
   }
 
   function initMessageListener() {
@@ -144,6 +167,8 @@
         applyEndScreenFeedEnabled(!!msg.enabled);
       } else if (msg.type === "SET_DISABLE_AUTOPLAY") {
         applyDisableAutoplayEnabled(!!msg.enabled);
+      } else if (msg.type === "SET_HIDE_PLAYLIST") {
+        applyPlaylistEnabled(!!msg.enabled);
       }
     });
   }
@@ -172,6 +197,11 @@
       toggleAutoplaySwitch(false);
       stopObservingAutoplay();
     }
+  }
+
+  function applyPlaylistEnabled(nextEnabled) {
+    enabledHidePlaylist = !!nextEnabled;
+    setPlaylistHidden(enabledHidePlaylist);
   }
 
   function init() {

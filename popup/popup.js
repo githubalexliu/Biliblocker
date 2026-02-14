@@ -2,6 +2,7 @@ const KEY_HIDE_HOME_FEED = "hideHomeFeed";
 const KEY_HIDE_SIDEBAR = "hideSidebar";
 const KEY_HIDE_END_SCREEN_FEED = "hideEndScreenFeed";
 const KEY_DISABLE_AUTOPLAY = "disableAutoplay";
+const KEY_HIDE_PLAYLIST = "hidePlaylist";
 
 function getApi() {
   return globalThis.browser ?? globalThis.chrome;
@@ -59,8 +60,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const checkboxSidebar = document.getElementById("hide-sidebar");
   const checkboxEndScreenFeed = document.getElementById("hide-end-screen-feed");
   const checkboxDisableAutoplay = document.getElementById("disable-autoplay");
-  
-  if (!(checkboxHomeFeed instanceof HTMLInputElement) || !(checkboxSidebar instanceof HTMLInputElement) || !(checkboxEndScreenFeed instanceof HTMLInputElement) || !(checkboxDisableAutoplay instanceof HTMLInputElement)) return;
+  const checkboxHidePlaylist = document.getElementById("hide-playlist");
+
+  if (!(checkboxHomeFeed instanceof HTMLInputElement) || !(checkboxSidebar instanceof HTMLInputElement) || !(checkboxEndScreenFeed instanceof HTMLInputElement) || !(checkboxDisableAutoplay instanceof HTMLInputElement) || !(checkboxHidePlaylist instanceof HTMLInputElement)) return;
 
   // Load and initialize home feed setting
   const storedHomeFeed = await storageGet(KEY_HIDE_HOME_FEED);
@@ -94,11 +96,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     await storageSet({ [KEY_DISABLE_AUTOPLAY]: true });
   }
 
+  // Load and initialize hide playlist setting
+  const storedHidePlaylist = await storageGet(KEY_HIDE_PLAYLIST);
+  const initialHidePlaylist = typeof storedHidePlaylist?.[KEY_HIDE_PLAYLIST] === "boolean" ? storedHidePlaylist[KEY_HIDE_PLAYLIST] : true;
+  checkboxHidePlaylist.checked = initialHidePlaylist;
+  if (typeof storedHidePlaylist?.[KEY_HIDE_PLAYLIST] !== "boolean") {
+    await storageSet({ [KEY_HIDE_PLAYLIST]: true });
+  }
+
   // Apply immediately on current tab (no refresh needed).
   await sendSettingToTab("SET_HIDE_HOME_FEED", checkboxHomeFeed.checked);
   await sendSettingToTab("SET_HIDE_SIDEBAR", checkboxSidebar.checked);
   await sendSettingToTab("SET_HIDE_END_SCREEN_FEED", checkboxEndScreenFeed.checked);
   await sendSettingToTab("SET_DISABLE_AUTOPLAY", checkboxDisableAutoplay.checked);
+  await sendSettingToTab("SET_HIDE_PLAYLIST", checkboxHidePlaylist.checked);
 
   checkboxHomeFeed.addEventListener("change", async () => {
     await storageSet({ [KEY_HIDE_HOME_FEED]: checkboxHomeFeed.checked });
@@ -118,6 +129,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   checkboxDisableAutoplay.addEventListener("change", async () => {
     await storageSet({ [KEY_DISABLE_AUTOPLAY]: checkboxDisableAutoplay.checked });
     await sendSettingToTab("SET_DISABLE_AUTOPLAY", checkboxDisableAutoplay.checked);
+  });
+
+  checkboxHidePlaylist.addEventListener("change", async () => {
+    await storageSet({ [KEY_HIDE_PLAYLIST]: checkboxHidePlaylist.checked });
+    await sendSettingToTab("SET_HIDE_PLAYLIST", checkboxHidePlaylist.checked);
   });
 });
 
